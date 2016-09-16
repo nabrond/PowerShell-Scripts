@@ -1,4 +1,4 @@
-[CmdletBinding()]
+[CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = "Low")]
 param
 (
     # Path to the local copy of the Sysinternal tools
@@ -30,10 +30,15 @@ Get-ChildItem -Path $LocalPath | ForEach-Object {
     ## compare last modified time in UTC
     if ($updatedTool.LastWriteTimeUtc -gt $currentTool.LastWriteTimeUtc)
     {
-        Write-Host " Updating $($currentTool.BaseName)"
-        Write-Verbose "  >> Begin copy process"
-        Copy-Item -Path $updatedTool.FullName -Destination $currentTool.FullName -Force | Out-Null
-        Write-Verbose "  >> End copy process"
+        if ($PSCmdlet.ShouldProcess($currentTool.BaseName, "Update"))
+        {
+            Write-Host " Updating $($currentTool.BaseName)"
+            Write-Verbose "  >> Begin copy process"
+
+            ## copy the updated tool to the local system
+            Copy-Item -Path $updatedTool.FullName -Destination $currentTool.FullName -Force | Out-Null
+            Write-Verbose "  >> End copy process"
+        }
     }
 }
 
