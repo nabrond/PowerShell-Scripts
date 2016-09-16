@@ -7,7 +7,7 @@ param
     $LocalPath
 )
 
-if (!Test-Path -Path $LocalPath -PathType Container)
+if (-not (Test-Path -Path $LocalPath -PathType Container))
 {
     throw "LocalPath must be a valid directory!"
 }
@@ -27,6 +27,7 @@ Get-ChildItem -Path $LocalPath | ForEach-Object {
     
     $updatedTool = Get-Item (Join-Path -Path $updateSource -ChildPath $currentTool.Name)
     
+    Write-Verbose " Local = $($currentTool.LastWriteTimeUtc); Remote = $($updatedTool.LastWriteTimeUtc)"
     ## compare last modified time in UTC
     if ($updatedTool.LastWriteTimeUtc -gt $currentTool.LastWriteTimeUtc)
     {
