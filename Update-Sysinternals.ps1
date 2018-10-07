@@ -3,21 +3,19 @@ param
 (
     # Path to the local copy of the Sysinternal tools
     [Parameter(Mandatory = $true)]
-    [string]
-    $LocalPath
+    [ValidateScript({ Test-Path -Path $_ -PathType Container })]
+    [System.String]
+    $LocalPath,
+
+    [System.String]
+    $UpdateSource = '\\live.sysinternals.com\Tools'
 )
 
-if (-not (Test-Path -Path $LocalPath -PathType Container))
-{
-    throw "LocalPath must be a valid directory!"
-}
-
-## Sysinternals SMB share
-$updateSource = "\\live.sysinternals.com\Tools"
+$updateDriveName = 'SysInternals'
 
 ## establish connection to the update source
 Write-Verbose "Connecting to $updateSource"
-net use $updateSource | Out-Null
+$updateDrive = New-PSDrive -Name $updateDriveName -PSProvider FileSystem -Root $UpdateSource -ErrorAction Stop
 
 ## loop over our current toolset
 Get-ChildItem -Path $LocalPath | ForEach-Object {
@@ -25,15 +23,16 @@ Get-ChildItem -Path $LocalPath | ForEach-Object {
 
     Write-Verbose "Checking: $($currentTool.Name)"
     
-    $updatedTool = Get-Item (Join-Path -Path $updateSource -ChildPath $currentTool.Name)
+    $updatedTool = Get-Item (Join-Path -Path "$($updateDriveName):" -ChildPath $currentTool.Name)
     
     Write-Verbose " Local = $($currentTool.LastWriteTimeUtc); Remote = $($updatedTool.LastWriteTimeUtc)"
+
     ## compare last modified time in UTC
     if ($updatedTool.LastWriteTimeUtc -gt $currentTool.LastWriteTimeUtc)
     {
         if ($PSCmdlet.ShouldProcess($currentTool.BaseName, "Update"))
         {
-            Write-Host " Updating $($currentTool.BaseName)"
+            Write-Output " Updating $($currentTool.BaseName)"
             Write-Verbose "  >> Begin copy process"
 
             ## copy the updated tool to the local system
@@ -45,4 +44,4 @@ Get-ChildItem -Path $LocalPath | ForEach-Object {
 
 ## disconnect from update source
 Write-Verbose "Closing connection to $updateSource"
-net use $updateSource /del | Out-Null
+$updateDrive | Remove-PSDrive
