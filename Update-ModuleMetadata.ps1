@@ -1,9 +1,9 @@
 ﻿[CmdletBinding(SupportsShouldProcess = $true)]
 param
 (
-    [Parameter()]
+    [Parameter(ValueFromPipeline = $true)]
     [System.String[]]
-    $ModuleName = (Get-InstalledModule | Sort-Object -Property Name).Name
+    $ModuleName
 )
 
 begin
