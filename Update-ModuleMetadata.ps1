@@ -15,6 +15,13 @@ begin
 
 process
 {
+    # No module(s) specified?
+    if ($null -eq $ModuleName)
+    {
+        Write-Verbose -Message 'No module(s) specified, getting all available modules.'
+        $ModuleName = (Get-Module -List | Sort-Object -Property Name).Name
+    }
+
     foreach ($module in $ModuleName)
     {
         Write-Output "Processing module [$module]"
