@@ -7,6 +7,7 @@ param
     [System.String]
     $LocalPath,
 
+    [Parameter()]
     [System.String]
     $UpdateSource = '\\live.sysinternals.com\Tools'
 )
