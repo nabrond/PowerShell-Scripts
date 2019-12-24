@@ -1,16 +1,25 @@
-﻿[CmdletBinding()]
+﻿[CmdletBinding(SupportsShouldProcess)]
 param()
 
-Write-Verbose 'Checking installed modules...'
+Write-Verbose 'Find installed modules...'
+$installedModules = Get-InstalledModule
 
-Get-InstalledModule | ForEach-Object { 
-    $Latest = $_
+Write-Verbose 'Begin processing modules'
+foreach ($module in $installedModules)
+{
+    Write-Verbose "  > $($module.Name)"
 
-    Write-Verbose "  > $($_.Name)"
+    # Get all versions for the module
+    $priorVersions = Get-Module -Name $module.Name -ListAvailable |
+        Where-Object -Property Version -lt $module.Version
 
-    Get-InstalledModule $Latest.Name -AllVersions | 
-        Where-Object { $_.Version -ne $Latest.Version } | 
-        Uninstall-Module -Force -Verbose:$VerbosePreference
+    $versionList = $priorVersions.Version -join '; '
+
+    if ($PSCmdlet.ShouldProcess("$($module.Name) ($versionList)", 'Uninstall'))
+    {
+        # Uninstall the modules
+        $priorVersions | Uninstall-Module -Force
+    }
 }
 
 Write-Verbose 'Process complete!'
