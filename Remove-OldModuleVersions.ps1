@@ -1,8 +1,13 @@
 ﻿[CmdletBinding(SupportsShouldProcess)]
-param()
+param
+(
+    [Parameter()]
+    [System.String[]]
+    $Name
+)
 
 Write-Verbose 'Find installed modules...'
-$installedModules = Get-InstalledModule
+$installedModules = Get-InstalledModule -Name $Name
 
 Write-Verbose 'Begin processing modules'
 foreach ($module in $installedModules)
