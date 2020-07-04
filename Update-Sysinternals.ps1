@@ -1,7 +1,17 @@
+<#
+    .SYNOPSIS
+        Updates the local copy of Sysinternals tools from a central source.
+
+    .PARAMETER LocalPath
+        Path on the local computer where Sysinternals tools are installed.
+
+    .PARAMETER UpdateSource
+        Path to the remote Sysinternals source.
+        Default: \\\live.sysinternals.com\tools
+#>
 [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = "Low")]
 param
 (
-    # Path to the local copy of the Sysinternal tools
     [Parameter(Mandatory = $true)]
     [ValidateScript({ Test-Path -Path $_ -PathType Container })]
     [System.String]
@@ -15,34 +25,34 @@ param
 $updateDriveName = 'SysInternals'
 
 ## establish connection to the update source
-Write-Verbose "Connecting to $updateSource"
+Write-Debug "Connecting to $updateSource"
 $updateDrive = New-PSDrive -Name $updateDriveName -PSProvider FileSystem -Root $UpdateSource -ErrorAction Stop
 
 ## loop over our current toolset
 Get-ChildItem -Path $LocalPath | ForEach-Object {
     $currentTool = $_
 
-    Write-Verbose "Checking: $($currentTool.Name)"
+    Write-Debug "Checking: $($currentTool.Name)"
     
     $updatedTool = Get-Item (Join-Path -Path "$($updateDriveName):" -ChildPath $currentTool.Name)
     
-    Write-Verbose " Local = $($currentTool.LastWriteTimeUtc); Remote = $($updatedTool.LastWriteTimeUtc)"
+    Write-Debug "Local --> $($currentTool.LastWriteTimeUtc)"
+    Write-Debug "Remote --> $($updatedTool.LastWriteTimeUtc)"
 
     ## compare last modified time in UTC
     if ($updatedTool.LastWriteTimeUtc -gt $currentTool.LastWriteTimeUtc)
     {
         if ($PSCmdlet.ShouldProcess($currentTool.BaseName, "Update"))
         {
-            Write-Output " Updating $($currentTool.BaseName)"
-            Write-Verbose "  >> Begin copy process"
+            Write-Debug "Begin copy process"
 
             ## copy the updated tool to the local system
             Copy-Item -Path $updatedTool.FullName -Destination $currentTool.FullName -Force | Out-Null
-            Write-Verbose "  >> End copy process"
+            Write-Debug "End copy process"
         }
     }
 }
 
 ## disconnect from update source
-Write-Verbose "Closing connection to $updateSource"
+Write-Debug "Closing connection to $updateSource"
 $updateDrive | Remove-PSDrive
