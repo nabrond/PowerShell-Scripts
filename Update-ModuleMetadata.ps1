@@ -1,7 +1,11 @@
 ﻿[CmdletBinding(SupportsShouldProcess = $true)]
 param
 (
-    [Parameter(ValueFromPipeline = $true)]
+    [Parameter(
+        ValueFromPipeline = $true,
+        ValueFromPipelineByPropertyName = $true    
+    )]
+    [Alias('Name')]
     [System.String[]]
     $ModuleName
 )
