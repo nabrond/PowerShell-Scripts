@@ -72,15 +72,29 @@ process
                         'Confirm installation path update.'
                     ))
                     {
+                        Write-Verbose "Updating installation location value."
                         $moduleInstallationInfo.InstalledLocation = $moduleRoot
-                    
-                        # Unhide the file
+                        
+                        Write-Verbose "Unhiding module manifest '$moduleInfoPath'."
                         Set-ItemProperty -Path $moduleInfoPath -Name 'Attributes' -Value 'Normal'
 
-                        # Export the updated settings
+                        Write-Verbose 'Saving module manifest changes.'
                         $moduleInstallationInfo | Export-Clixml -Path $moduleInfoPath -Force
 
-                        # Hide the file
+                        Write-Verbose "Hiding module manifest '$moduleInfoPath'."
+                        Set-ItemProperty -Path $moduleInfoPath -Name 'Attributes' -Value 'Hidden'
+                    }
+                }
+
+                if ($true -eq ((Get-ItemProperty -Path $moduleInfoPath).Attributes -band 'Hidden') -ne 0)
+                {
+                    if ($PSCmdlet.ShouldProcess(
+                        "Hide PowerShellGet module manifest file [$($moduleInfoPath)].",
+                        "Are you sure you wan to hide the PowerShellGet module manifest file [$($moduleInfoPath)].",
+                        'Confirm operation.'
+                    ))
+                    {
+                        Write-Verbose "Hiding module manifest '$moduleInfoPath'."
                         Set-ItemProperty -Path $moduleInfoPath -Name 'Attributes' -Value 'Hidden'
                     }
                 }
