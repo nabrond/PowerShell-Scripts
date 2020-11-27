@@ -15,6 +15,11 @@ begin
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = New-Object Security.Principal.WindowsPrincipal $identity
     $script:IsElevated = $principal.IsInRole('Administrator')
+
+    if ($false -eq $script:IsElevated)
+    {
+        Write-Warning 'Only modules from the "CurrentUser" scope will be processed.'
+    }
 }
 
 process
@@ -51,28 +56,33 @@ process
                     # Check whether the current session is elevated
                     if ($script:IsElevated -eq $false)
                     {
-                        Write-Warning "Module [$($moduleVersion.Name) ($($moduleVersion.Version))] is not installed in the current user's profile. Please re-run this script from an elevated PowerShell session."
+                        Write-Warning "Skipping $($moduleVersion.Name) ($($moduleVersion.Version)) due to module scope."
                         continue;
                     }
                 }
 
                 Write-Verbose "Found module manifest at '$moduleInfoPath'. Loading contents."
                 $moduleInstallationInfo = Import-Clixml -Path $moduleInfoPath
-                $moduleInstallationInfo.InstalledLocation = $moduleRoot
 
-                if ($PSCmdlet.ShouldProcess(
-                    "Update module installation information for [$($moduleVersion.Name) ($($moduleVersion.Version))]", 
-                    "Should update module installation information for [$($moduleVersion.Name) ($($moduleVersion.Version))]", 'Confirm information update.'
-                ))
+                if ($moduleInstallationInfo.InstalledLocation -ne $moduleRoot)
                 {
-                    # Unhide the file
-                    Set-ItemProperty -Path $moduleInfoPath -Name 'Attributes' -Value 'Normal'
+                    if ($PSCmdlet.ShouldProcess(
+                        "Updating installation path for [$($moduleVersion.Name) ($($moduleVersion.Version))]", 
+                        "Are you sure you want to update the installation path for [$($moduleVersion.Name) ($($moduleVersion.Version))]?",
+                        'Confirm installation path update.'
+                    ))
+                    {
+                        $moduleInstallationInfo.InstalledLocation = $moduleRoot
+                    
+                        # Unhide the file
+                        Set-ItemProperty -Path $moduleInfoPath -Name 'Attributes' -Value 'Normal'
 
-                    # Export the updated settings
-                    $moduleInstallationInfo | Export-Clixml -Path $moduleInfoPath -Force
+                        # Export the updated settings
+                        $moduleInstallationInfo | Export-Clixml -Path $moduleInfoPath -Force
 
-                    # Hide the file
-                    Set-ItemProperty -Path $moduleInfoPath -Name 'Attributes' -Value 'Hidden'
+                        # Hide the file
+                        Set-ItemProperty -Path $moduleInfoPath -Name 'Attributes' -Value 'Hidden'
+                    }
                 }
             }
             else
