@@ -20,10 +20,18 @@ begin
     {
         Write-Warning 'Only modules from the "CurrentUser" scope will be processed.'
     }
+
+    if ($DebugPreference -eq 'Inquire')
+    {
+        # No need to confirm every action here
+        $DebugPreference = 'Continue'
+    }
 }
 
 process
 {
+    Write-Output $DebugPreference
+
     # No module(s) specified?
     if ($null -eq $ModuleName)
     {
@@ -33,21 +41,21 @@ process
 
     foreach ($module in $ModuleName)
     {
-        Write-Output "Processing module [$module]"
+        Write-Verbose "Processing module [$module]"
 
         # Get all versions of the current module
         $moduleVersions = Get-Module -Name $module -ListAvailable
 
         foreach ($moduleVersion in $moduleVersions)
         {
-            Write-Output "Processing version [$($moduleVersion.Version)]"
-            Write-Verbose "Getting module location"
+            Write-Verbose "Processing version [$($moduleVersion.Version)]"
+            Write-Debug "Getting module location"
             $moduleRoot = $moduleVersion.ModuleBase
 
-            Write-Verbose "Building path for installation data file."
+            Write-Debug "Building path for installation data file."
             $moduleInfoPath = Join-Path -Path $moduleRoot -ChildPath 'PSGetModuleInfo.xml'
             
-            Write-Verbose 'Testing whether module was installed with PSGet.'
+            Write-Debug 'Testing whether module was installed with PSGet.'
             if (Test-Path -Path $moduleInfoPath -PathType Leaf)
             {
                 # If the module is not in the current users's profile
@@ -56,12 +64,12 @@ process
                     # Check whether the current session is elevated
                     if ($script:IsElevated -eq $false)
                     {
-                        Write-Warning "Skipping $($moduleVersion.Name) ($($moduleVersion.Version)) due to module scope."
+                        Write-Debug "Skipping $($moduleVersion.Name) ($($moduleVersion.Version)) due to module scope."
                         continue;
                     }
                 }
 
-                Write-Verbose "Found module manifest at '$moduleInfoPath'. Loading contents."
+                Write-Debug "Found module manifest at '$moduleInfoPath'. Loading contents."
                 $moduleInstallationInfo = Import-Clixml -Path $moduleInfoPath
 
                 if ($moduleInstallationInfo.InstalledLocation -ne $moduleRoot)
@@ -72,21 +80,21 @@ process
                         'Confirm installation path update.'
                     ))
                     {
-                        Write-Verbose "Updating installation location value."
+                        Write-Debug "Updating installation location value."
                         $moduleInstallationInfo.InstalledLocation = $moduleRoot
                         
-                        Write-Verbose "Unhiding module manifest '$moduleInfoPath'."
-                        Set-ItemProperty -Path $moduleInfoPath -Name 'Attributes' -Value 'Normal'
+                        Write-Debug "Unhiding module manifest '$moduleInfoPath'."
+                        Set-ItemProperty -Path $moduleInfoPath -Name 'Attributes' -Value 'Normal' -Confirm:$false
 
-                        Write-Verbose 'Saving module manifest changes.'
+                        Write-Debug 'Saving module manifest changes.'
                         $moduleInstallationInfo | Export-Clixml -Path $moduleInfoPath -Force
 
-                        Write-Verbose "Hiding module manifest '$moduleInfoPath'."
-                        Set-ItemProperty -Path $moduleInfoPath -Name 'Attributes' -Value 'Hidden'
+                        Write-Debug "Hiding module manifest '$moduleInfoPath'."
+                        Set-ItemProperty -Path $moduleInfoPath -Name 'Attributes' -Value 'Hidden' -Confirm:$false
                     }
                 }
 
-                if ($true -eq ((Get-ItemProperty -Path $moduleInfoPath).Attributes -band 'Hidden') -ne 0)
+                if (((Get-ItemProperty -Path $moduleInfoPath).Attributes -band 'Hidden') -ne 'Hidden')
                 {
                     if ($PSCmdlet.ShouldProcess(
                         "Hide PowerShellGet module manifest file [$($moduleInfoPath)].",
@@ -94,14 +102,10 @@ process
                         'Confirm operation.'
                     ))
                     {
-                        Write-Verbose "Hiding module manifest '$moduleInfoPath'."
-                        Set-ItemProperty -Path $moduleInfoPath -Name 'Attributes' -Value 'Hidden'
+                        Write-Debug "Hiding module manifest '$moduleInfoPath'."
+                        Set-ItemProperty -Path $moduleInfoPath -Name 'Attributes' -Value 'Hidden' -Confirm:$false
                     }
                 }
-            }
-            else
-            {
-                Write-Warning "Module [$($moduleVersion.Name) ($($moduleVersion.Version))] was not installed with the built-in package manager!"
             }
         }
     }
